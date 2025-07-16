@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droppable } from 'react-beautiful-dnd';
+import { useDroppable } from '@dnd-kit/core';
 import { Task, TaskStatus } from '../types';
 import { TaskCard } from './TaskCard';
 import clsx from 'clsx';
@@ -23,6 +23,10 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({
   tasks,
   onEditTask,
 }) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: status,
+  });
+
   return (
     <div className={clsx('rounded-lg border-2 border-dashed p-4', statusColors[status])}>
       <div className="flex items-center justify-between mb-4">
@@ -32,34 +36,28 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({
         </span>
       </div>
 
-      <Droppable droppableId={status}>
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={clsx(
-              'min-h-[200px] space-y-3 transition-colors',
-              snapshot.isDraggingOver && 'bg-primary-50'
-            )}
-          >
-            {tasks.map((task, index) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                index={index}
-                onEdit={() => onEditTask(task.id)}
-              />
-            ))}
-            {provided.placeholder}
-            
-            {tasks.length === 0 && (
-              <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
-                No tasks yet
-              </div>
-            )}
+      <div
+        ref={setNodeRef}
+        className={clsx(
+          'min-h-[200px] space-y-3 transition-colors',
+          isOver && 'bg-primary-50'
+        )}
+      >
+        {tasks.map((task, index) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            index={index}
+            onEdit={() => onEditTask(task.id)}
+          />
+        ))}
+        
+        {tasks.length === 0 && (
+          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+            No tasks yet
           </div>
         )}
-      </Droppable>
+      </div>
     </div>
   );
 }; 

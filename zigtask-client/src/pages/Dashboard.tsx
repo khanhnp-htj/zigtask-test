@@ -1,41 +1,79 @@
 import React, { useEffect, useState } from 'react';
-import { DragDropContext, DropResult } from 'react-beautiful-dnd';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useTaskStore } from '../stores/taskStore';
-import { TaskStatus } from '../types';
+import { TaskStatus, Task } from '../types';
 import { TaskColumn } from '../components/TaskColumn';
 import { TaskModal } from '../components/TaskModal';
 import { TaskFilters } from '../components/TaskFilters';
+import { TaskCard } from '../components/TaskCard';
 
 export const Dashboard: React.FC = () => {
   const { tasksByStatus, isLoading, fetchTasksByStatus, moveTask } = useTaskStore();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 3,
+      },
+    })
+  );
 
   useEffect(() => {
     fetchTasksByStatus();
   }, [fetchTasksByStatus]);
 
-  const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    
+    // Find the task being dragged
+    const allTasks = [
+      ...tasksByStatus.todo,
+      ...tasksByStatus.in_progress,
+      ...tasksByStatus.done,
+    ];
+    const task = allTasks.find(t => t.id === active.id);
+    setActiveTask(task || null);
+  };
 
-    // If dropped outside a droppable area
-    if (!destination) {
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    setActiveTask(null);
+
+    if (!over) {
       return;
     }
 
-    // If dropped in the same position
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
+    const taskId = active.id as string;
+    const newStatus = over.id as TaskStatus;
+
+    // Find current status of the task
+    let currentStatus: TaskStatus | null = null;
+    if (tasksByStatus.todo.some(task => task.id === taskId)) {
+      currentStatus = TaskStatus.TODO;
+    } else if (tasksByStatus.in_progress.some(task => task.id === taskId)) {
+      currentStatus = TaskStatus.IN_PROGRESS;
+    } else if (tasksByStatus.done.some(task => task.id === taskId)) {
+      currentStatus = TaskStatus.DONE;
     }
 
-    // Move task to new status
-    const newStatus = destination.droppableId as TaskStatus;
-    await moveTask(draggableId, newStatus);
+    // Only move if status changed
+    if (currentStatus && currentStatus !== newStatus) {
+      await moveTask(taskId, newStatus);
+    }
   };
 
   const handleCreateTask = () => {
@@ -113,7 +151,11 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Task Board */}
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <TaskColumn
             title="To Do"
@@ -134,7 +176,19 @@ export const Dashboard: React.FC = () => {
             onEditTask={handleEditTask}
           />
         </div>
-      </DragDropContext>
+        
+        <DragOverlay>
+          {activeTask ? (
+            <div className="rotate-5 opacity-95">
+              <TaskCard
+                task={activeTask}
+                index={0}
+                onEdit={() => {}}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Task Modal */}
       <TaskModal

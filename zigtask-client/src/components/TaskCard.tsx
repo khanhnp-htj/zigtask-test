@@ -1,5 +1,5 @@
 import React from 'react';
-import { Draggable } from 'react-beautiful-dnd';
+import { useDraggable } from '@dnd-kit/core';
 import { 
   CalendarIcon,
   PencilIcon,
@@ -42,6 +42,20 @@ const priorityConfig = {
 export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit }) => {
   const { deleteTask } = useTaskStore();
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: task.id,
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
+
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this task?')) {
@@ -54,18 +68,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit }) => {
   const priority = priorityConfig[task.priority] || priorityConfig[TaskPriority.MEDIUM];
 
   return (
-    <Draggable draggableId={task.id} index={index}>
-      {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className={clsx(
-            'bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer',
-            snapshot.isDragging && 'task-card-dragging'
-          )}
-          onClick={onEdit}
-        >
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={clsx(
+        'bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer',
+        isDragging && 'opacity-50'
+      )}
+      onClick={onEdit}
+    >
           <div className="space-y-3">
             {/* Title and Priority */}
             <div className="flex items-start justify-between gap-2">
@@ -144,7 +157,5 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit }) => {
             </div>
           </div>
         </div>
-      )}
-    </Draggable>
   );
 }; 
