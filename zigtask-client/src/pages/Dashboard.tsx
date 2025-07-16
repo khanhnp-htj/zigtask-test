@@ -19,7 +19,7 @@ import { TaskFilters } from '../components/TaskFilters';
 import { TaskCard } from '../components/TaskCard';
 
 export const Dashboard: React.FC = () => {
-  const { tasksByStatus, isLoading, fetchTasksByStatus, moveTask, reorderTasks } = useTaskStore();
+  const { tasksByStatus, isLoading, fetchTasksByStatus, moveTask, reorderTasks, filters } = useTaskStore();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -140,19 +140,32 @@ export const Dashboard: React.FC = () => {
     setSelectedTaskId(null);
   };
 
+  // Helper function to apply all filters to a task array
+  const applyFilters = (tasks: Task[]): Task[] => {
+    return tasks.filter(task => {
+      // Search filter (local search query)
+      const matchesSearch = !searchQuery || 
+        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Priority filter
+      const matchesPriority = !filters.priority || task.priority === filters.priority;
+
+      // Date range filters
+      const matchesDateFrom = !filters.dateFrom || 
+        (task.dueDate && new Date(task.dueDate) >= new Date(filters.dateFrom));
+      
+      const matchesDateTo = !filters.dateTo || 
+        (task.dueDate && new Date(task.dueDate) <= new Date(filters.dateTo));
+
+      return matchesSearch && matchesPriority && matchesDateFrom && matchesDateTo;
+    });
+  };
+
   const filteredTasksByStatus = {
-    todo: tasksByStatus.todo.filter(task =>
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
-    in_progress: tasksByStatus.in_progress.filter(task =>
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
-    done: tasksByStatus.done.filter(task =>
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    ),
+    todo: applyFilters(tasksByStatus.todo),
+    in_progress: applyFilters(tasksByStatus.in_progress),
+    done: applyFilters(tasksByStatus.done),
   };
 
   if (isLoading) {

@@ -22,7 +22,7 @@ const useAuthStore = create<AuthState>()(
   devtools(
     (set, get) => ({
       user: null,
-      isLoading: false,
+      isLoading: true, // Start with loading = true to prevent premature redirects
       isAuthenticated: false,
 
       signUp: async (data: SignUpData) => {
@@ -50,10 +50,16 @@ const useAuthStore = create<AuthState>()(
       signIn: async (data: SignInData) => {
         set({ isLoading: true });
         try {
+          console.log('🔍 SignIn: Starting signin process', data.email);
           const response = await authService.signIn(data);
+          console.log('🔍 SignIn: Got response', { user: response.user.email, tokenLength: response.token.length });
           
           apiService.setAuthToken(response.token);
           localStorage.setItem('user', JSON.stringify(response.user));
+          console.log('🔍 SignIn: Stored in localStorage', {
+            token: localStorage.getItem('token'),
+            user: localStorage.getItem('user') ? 'stored' : 'not stored'
+          });
           
           set({ 
             user: response.user, 
@@ -97,18 +103,32 @@ const useAuthStore = create<AuthState>()(
       },
 
       initializeAuth: () => {
+        // Set loading to true while initializing
+        set({ isLoading: true });
+        console.log('🔍 InitAuth: Starting auth initialization');
+        
         try {
           const token = localStorage.getItem('token');
           const userStr = localStorage.getItem('user');
+          console.log('🔍 InitAuth: Retrieved from localStorage', {
+            hasToken: !!token,
+            tokenLength: token?.length || 0,
+            hasUser: !!userStr,
+            userPreview: userStr ? JSON.parse(userStr).email : 'none'
+          });
           
           if (token && userStr) {
             const user = JSON.parse(userStr);
+            // CRITICAL FIX: Set the token in the API service
+            apiService.setAuthToken(token);
+            console.log('🔍 InitAuth: Restored authentication for user', user.email);
             set({ 
               user, 
               isAuthenticated: true,
               isLoading: false 
             });
           } else {
+            console.log('🔍 InitAuth: No valid auth data found, staying logged out');
             set({ 
               user: null, 
               isAuthenticated: false,
@@ -116,7 +136,7 @@ const useAuthStore = create<AuthState>()(
             });
           }
         } catch (error) {
-          console.error('Error initializing auth:', error);
+          console.error('🔍 InitAuth: Error during initialization:', error);
           // Clear corrupted data
           apiService.clearAuthToken();
           set({ 
