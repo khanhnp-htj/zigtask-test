@@ -1,18 +1,10 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { Task, TaskStatus, TaskPriority } from './entities/task.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { User } from '../users/entities/user.entity';
-import {
-  TaskEventType,
-  TaskCreatedEvent,
-  TaskUpdatedEvent,
-  TaskDeletedEvent,
-  TaskStatusChangedEvent,
-} from '../common/events/task.events';
 
 @Injectable()
 export class TasksService {
@@ -21,7 +13,6 @@ export class TasksService {
   constructor(
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
-    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(createTaskDto: CreateTaskDto, user: User): Promise<Task> {
@@ -38,17 +29,7 @@ export class TasksService {
       const task = this.taskRepository.create(taskData);
       const savedTask = await this.taskRepository.save(task);
       
-      // Emit event for real-time updates
-      const event: TaskCreatedEvent = {
-        taskId: savedTask.id,
-        userId: user.id,
-        task: savedTask,
-        timestamp: new Date(),
-      };
-      
-      this.eventEmitter.emit(TaskEventType.CREATED, event);
       this.logger.log(`Task created: ${savedTask.id} by user: ${user.id}`);
-      
       return savedTask;
     } catch (error) {
       this.logger.error(`Failed to create task for user ${user.id}:`, error instanceof Error ? error.message : 'Unknown error');
@@ -120,7 +101,6 @@ export class TasksService {
   async update(id: string, updateTaskDto: UpdateTaskDto, user: User): Promise<Task> {
     try {
       const task = await this.findOne(id, user);
-      const previousData = { ...task };
 
       const updateData: Partial<Task> = {
         ...updateTaskDto,
@@ -129,31 +109,6 @@ export class TasksService {
 
       await this.taskRepository.update(id, updateData);
       const updatedTask = await this.findOne(id, user);
-
-      // Emit event for real-time updates
-      const event: TaskUpdatedEvent = {
-        taskId: updatedTask.id,
-        userId: user.id,
-        task: updatedTask,
-        previousData,
-        timestamp: new Date(),
-      };
-
-      this.eventEmitter.emit(TaskEventType.UPDATED, event);
-
-      // Check for status change
-      if (previousData.status !== updatedTask.status) {
-        const statusChangeEvent: TaskStatusChangedEvent = {
-          taskId: updatedTask.id,
-          userId: user.id,
-          task: updatedTask,
-          oldStatus: previousData.status,
-          newStatus: updatedTask.status,
-          timestamp: new Date(),
-        };
-
-        this.eventEmitter.emit(TaskEventType.STATUS_CHANGED, statusChangeEvent);
-      }
 
       this.logger.log(`Task updated: ${updatedTask.id} by user: ${user.id}`);
       return updatedTask;
@@ -168,14 +123,6 @@ export class TasksService {
       const task = await this.findOne(id, user);
       await this.taskRepository.remove(task);
 
-      // Emit event for real-time updates
-      const event: TaskDeletedEvent = {
-        taskId: id,
-        userId: user.id,
-        timestamp: new Date(),
-      };
-
-      this.eventEmitter.emit(TaskEventType.DELETED, event);
       this.logger.log(`Task deleted: ${id} by user: ${user.id}`);
     } catch (error) {
       this.logger.error(`Failed to delete task ${id} for user ${user.id}:`, error instanceof Error ? error.message : 'Unknown error');

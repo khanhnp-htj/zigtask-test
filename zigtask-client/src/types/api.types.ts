@@ -89,14 +89,4 @@ export interface TaskFilters {
   priority?: TaskPriority;
   dateFrom?: string;
   dateTo?: string;
-}
-
-// WebSocket types
-export interface WebSocketEvent<T = any> {
-  taskId: string;
-  userId: string;
-  action: 'created' | 'updated' | 'deleted' | 'status_changed';
-  task?: T;
-  oldStatus?: TaskStatus;
-  newStatus?: TaskStatus;
 } 

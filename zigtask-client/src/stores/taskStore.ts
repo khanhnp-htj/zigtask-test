@@ -7,11 +7,23 @@ import {
   TasksGroupedByStatus,
   TaskFilters,
   TaskStatus,
-  WebSocketEvent,
 } from '../types/api.types';
 import { taskService } from '../services/taskService';
-import { websocketService } from '../services/websocketService';
 import toast from 'react-hot-toast';
+
+// Helper function to get current user ID
+const getCurrentUserId = (): string | null => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user.id;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 interface TaskState {
   tasks: Task[];
@@ -29,14 +41,6 @@ interface TaskState {
   reorderTasks: (status: TaskStatus, reorderedTasks: Task[]) => void;
   setFilters: (filters: TaskFilters) => void;
   clearFilters: () => void;
-  
-  // WebSocket methods
-  initializeWebSocket: () => void;
-  disconnectWebSocket: () => void;
-  handleTaskCreated: (task: Task) => void;
-  handleTaskUpdated: (task: Task) => void;
-  handleTaskDeleted: (taskId: string) => void;
-  handleTaskStatusChanged: (task: Task) => void;
 }
 
 const initialTasksByStatus: TasksGroupedByStatus = {
@@ -181,94 +185,6 @@ const useTaskStore = create<TaskState>()(
       clearFilters: () => {
         set({ filters: {} });
       },
-
-      // WebSocket methods
-      initializeWebSocket: () => {
-        if (!websocketService.isSocketConnected()) {
-          websocketService.connect();
-        }
-
-        // Set up event handlers
-        websocketService.onTaskCreated((eventData: WebSocketEvent<Task>) => {
-          if (eventData.task) {
-            get().handleTaskCreated(eventData.task);
-            toast.success(`📱 ${eventData.task.title} created`, {
-              duration: 2000,
-            });
-          }
-        });
-
-        websocketService.onTaskUpdated((eventData: WebSocketEvent<Task>) => {
-          if (eventData.task) {
-            get().handleTaskUpdated(eventData.task);
-            toast.success(`📱 ${eventData.task.title} updated`, {
-              duration: 2000,
-            });
-          }
-        });
-
-        websocketService.onTaskDeleted((eventData: WebSocketEvent) => {
-          get().handleTaskDeleted(eventData.taskId);
-          toast.success('📱 Task deleted', {
-            duration: 2000,
-          });
-        });
-
-        websocketService.onTaskStatusChanged((eventData: WebSocketEvent<Task>) => {
-          if (eventData.task) {
-            get().handleTaskStatusChanged(eventData.task);
-            toast.success(`📱 Task moved to ${eventData.newStatus?.replace('_', ' ')}`, {
-              duration: 2000,
-            });
-          }
-        });
-      },
-
-      disconnectWebSocket: () => {
-        websocketService.disconnect();
-      },
-
-      handleTaskCreated: (task: Task) => {
-        const { tasksByStatus } = get();
-        const updatedTasksByStatus = {
-          ...tasksByStatus,
-          [task.status]: [...tasksByStatus[task.status], task],
-        };
-        set({ tasksByStatus: updatedTasksByStatus });
-      },
-
-      handleTaskUpdated: (task: Task) => {
-        const { tasksByStatus } = get();
-        
-        // Remove task from all status arrays first
-        const newTasksByStatus: TasksGroupedByStatus = {
-          [TaskStatus.TODO]: tasksByStatus[TaskStatus.TODO].filter(t => t.id !== task.id),
-          [TaskStatus.IN_PROGRESS]: tasksByStatus[TaskStatus.IN_PROGRESS].filter(t => t.id !== task.id),
-          [TaskStatus.DONE]: tasksByStatus[TaskStatus.DONE].filter(t => t.id !== task.id),
-        };
-        
-        // Add updated task to correct status array
-        newTasksByStatus[task.status].push(task);
-        
-        set({ tasksByStatus: newTasksByStatus });
-      },
-
-      handleTaskDeleted: (taskId: string) => {
-        const { tasksByStatus } = get();
-        
-        const newTasksByStatus: TasksGroupedByStatus = {
-          [TaskStatus.TODO]: tasksByStatus[TaskStatus.TODO].filter(task => task.id !== taskId),
-          [TaskStatus.IN_PROGRESS]: tasksByStatus[TaskStatus.IN_PROGRESS].filter(task => task.id !== taskId),
-          [TaskStatus.DONE]: tasksByStatus[TaskStatus.DONE].filter(task => task.id !== taskId),
-        };
-        
-        set({ tasksByStatus: newTasksByStatus });
-      },
-
-      handleTaskStatusChanged: (task: Task) => {
-        // This is the same as handleTaskUpdated since status change is an update
-        get().handleTaskUpdated(task);
-      },
     })),
     {
       name: 'task-store',
@@ -279,5 +195,4 @@ const useTaskStore = create<TaskState>()(
   )
 );
 
-export { useTaskStore };
-export default useTaskStore; 
+export { useTaskStore }; 
