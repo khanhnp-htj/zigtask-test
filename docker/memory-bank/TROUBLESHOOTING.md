@@ -634,14 +634,15 @@ WebSocket connection errors or multiple event handlers
 ```
 
 **Solution:**
-WebSocket functionality has been completely removed to improve application stability and eliminate duplicate events.
+WebSocket functionality has been completely removed from all applications (web, mobile, and backend) to improve application stability and eliminate duplicate events.
 
 **Benefits of Removal:**
 - ✅ No more duplicate task creation
-- ✅ Simplified architecture
-- ✅ Better performance
-- ✅ Easier debugging
+- ✅ Simplified architecture across all platforms
+- ✅ Better performance and reduced bundle sizes
+- ✅ Easier debugging and development
 - ✅ More predictable behavior
+- ✅ Consistent REST-only API communication
 
 ### Performance Issues
 

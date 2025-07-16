@@ -3,7 +3,6 @@ import * as SecureStore from 'expo-secure-store';
 import { User, AuthResponse, LoginDto, RegisterDto } from '../types/api.types';
 import { authService } from '../services/authService';
 import { apiService } from '../services/api.service';
-import { websocketService } from '../services/websocketService';
 
 interface AuthContextType {
   user: User | null;
@@ -44,10 +43,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userData = JSON.parse(storedUser);
         setToken(storedToken);
         setUser(userData);
-        
-        // Initialize WebSocket connection for real-time updates
-        websocketService.connect();
-        websocketService.authenticateUser(userData.id);
       }
     } catch (error) {
       console.error('Error initializing auth:', error);
@@ -80,10 +75,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setToken(tokenValue);
       setUser(userData);
-      
-      // Initialize WebSocket connection for real-time updates
-      websocketService.connect();
-      websocketService.authenticateUser(userData.id);
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -114,10 +105,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setToken(tokenValue);
       setUser(userData);
-      
-      // Initialize WebSocket connection for real-time updates
-      websocketService.connect();
-      websocketService.authenticateUser(userData.id);
     } catch (error: any) {
       console.error('Registration error:', error);
       // Handle specific error codes
@@ -140,10 +127,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         SecureStore.deleteItemAsync(TOKEN_KEY),
         SecureStore.deleteItemAsync(USER_KEY),
       ]);
-      
-      // Disconnect WebSocket on logout
-      websocketService.unauthenticateUser();
-      websocketService.disconnect();
       
       // Clear API service auth
       await apiService.clearAuthToken();

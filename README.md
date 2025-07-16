@@ -186,9 +186,9 @@ When the API is running, visit http://localhost:8000/api/docs for interactive Sw
 The application has been optimized for production deployment. In development, React.StrictMode was causing duplicate function calls leading to duplicate task creation. This has been resolved by removing React.StrictMode.
 
 ### Performance Optimizations
-- **Lightweight Architecture**: WebSocket functionality was removed to eliminate complexity and improve reliability
+- **Lightweight Architecture**: WebSocket functionality was removed from all applications (web, mobile, backend) to eliminate complexity and improve reliability
 - **Efficient State Management**: Zustand provides lightweight and fast state updates
-- **Optimized API Calls**: RESTful architecture ensures predictable and reliable data operations
+- **Optimized API Calls**: RESTful architecture ensures predictable and reliable data operations across all platforms
 
 ## 🤝 Contributing
 

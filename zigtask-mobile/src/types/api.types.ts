@@ -77,16 +77,6 @@ export interface CreateTaskDto {
 
 export interface UpdateTaskDto extends Partial<CreateTaskDto> {}
 
-// WebSocket types
-export interface WebSocketEvent<T = any> {
-  taskId: string;
-  userId: string;
-  action: 'created' | 'updated' | 'deleted' | 'status_changed';
-  task?: T;
-  oldStatus?: TaskStatus;
-  newStatus?: TaskStatus;
-}
-
 // Storage types
 export interface CachedData<T> {
   data: T;
