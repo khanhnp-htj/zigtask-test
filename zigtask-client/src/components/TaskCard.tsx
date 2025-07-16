@@ -1,16 +1,9 @@
 import React from 'react';
-import { useDraggable } from '@dnd-kit/core';
-import { 
-  CalendarIcon,
-  PencilIcon,
-  TrashIcon,
-  ClockIcon,
-  ExclamationTriangleIcon
-} from '@heroicons/react/24/outline';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { CalendarIcon, FlagIcon } from '@heroicons/react/24/outline';
 import { Task, TaskPriority } from '../types';
-import { useTaskStore } from '../stores/taskStore';
-import { formatDate, isOverdue, getDaysUntilDue } from '../utils/date';
-import clsx from 'clsx';
+import { format } from 'date-fns';
 
 interface TaskCardProps {
   task: Task;
@@ -20,142 +13,94 @@ interface TaskCardProps {
 
 const priorityConfig = {
   [TaskPriority.LOW]: {
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    icon: '🟢',
     label: 'Low',
-    bgColor: 'bg-green-100',
-    textColor: 'text-green-800',
-    icon: '🟢'
   },
   [TaskPriority.MEDIUM]: {
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    icon: '🟡',
     label: 'Medium',
-    bgColor: 'bg-yellow-100',
-    textColor: 'text-yellow-800',
-    icon: '🟡'
   },
   [TaskPriority.HIGH]: {
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    icon: '🔴',
     label: 'High',
-    bgColor: 'bg-red-100',
-    textColor: 'text-red-800',
-    icon: '🔴'
   },
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, index, onEdit }) => {
-  const { deleteTask } = useTaskStore();
-
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
+    transition,
     isDragging,
-  } = useDraggable({
+  } = useSortable({
     id: task.id,
   });
 
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      await deleteTask(task.id);
-    }
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
-  const isTaskOverdue = isOverdue(task.dueDate);
-  const daysUntilDue = getDaysUntilDue(task.dueDate);
   const priority = priorityConfig[task.priority] || priorityConfig[TaskPriority.MEDIUM];
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
       {...attributes}
-      className={clsx(
-        'bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer',
-        isDragging && 'opacity-50'
-      )}
-      onClick={onEdit}
+      {...listeners}
+      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-move"
     >
-          <div className="space-y-3">
-            {/* Title and Priority */}
-            <div className="flex items-start justify-between gap-2">
-              <h4 className="font-medium text-gray-900 line-clamp-2 flex-1">
-                {task.title}
-              </h4>
-              <span className={clsx(
-                'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0',
-                priority.bgColor,
-                priority.textColor
-              )}>
-                <span>{priority.icon}</span>
-                {priority.label}
-              </span>
-            </div>
+      <div className="flex items-start justify-between mb-2">
+        <h4 className="text-sm font-medium text-gray-900 line-clamp-2">
+          {task.title}
+        </h4>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+          title="Edit task"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+          </svg>
+        </button>
+      </div>
 
-            {/* Description */}
-            {task.description && (
-              <p className="text-sm text-gray-600 line-clamp-3">
-                {task.description}
-              </p>
-            )}
+      {task.description && (
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          {task.description}
+        </p>
+      )}
 
-            {/* Due Date */}
-            {task.dueDate && (
-              <div className={clsx(
-                'flex items-center space-x-2 text-xs',
-                isTaskOverdue ? 'text-red-600' : 'text-gray-500'
-              )}>
-                {isTaskOverdue ? (
-                  <ExclamationTriangleIcon className="h-4 w-4" />
-                ) : (
-                  <CalendarIcon className="h-4 w-4" />
-                )}
-                <span>
-                  {formatDate(task.dueDate)}
-                  {daysUntilDue !== null && (
-                    <span className="ml-1">
-                      {isTaskOverdue 
-                        ? `(${Math.abs(daysUntilDue)} days overdue)`
-                        : daysUntilDue === 0 
-                          ? '(Due today)'
-                          : `(${daysUntilDue} days left)`
-                      }
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
-
-            {/* Created Date */}
-            <div className="flex items-center space-x-2 text-xs text-gray-400">
-              <ClockIcon className="h-4 w-4" />
-              <span>Created {formatDate(task.createdAt)}</span>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                className="p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                title="Edit task"
-              >
-                <PencilIcon className="h-4 w-4" />
-              </button>
-              <button
-                onClick={handleDelete}
-                className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                title="Delete task"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <span
+            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${priority.bgColor} ${priority.color}`}
+          >
+            <span className="mr-1">{priority.icon}</span>
+            {priority.label}
+          </span>
         </div>
+
+        {task.dueDate && (
+          <div className="flex items-center text-xs text-gray-500">
+            <CalendarIcon className="h-3 w-3 mr-1" />
+            {format(new Date(task.dueDate), 'MMM dd')}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }; 

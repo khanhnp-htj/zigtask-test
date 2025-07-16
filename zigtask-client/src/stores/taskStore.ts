@@ -26,6 +26,7 @@ interface TaskState {
   updateTask: (id: string, data: UpdateTaskData) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   moveTask: (taskId: string, newStatus: TaskStatus) => Promise<void>;
+  reorderTasks: (status: TaskStatus, reorderedTasks: Task[]) => void;
   setFilters: (filters: TaskFilters) => void;
   clearFilters: () => void;
   
@@ -162,6 +163,15 @@ const useTaskStore = create<TaskState>()(
           toast.error('Failed to move task');
           throw error;
         }
+      },
+
+      reorderTasks: (status: TaskStatus, reorderedTasks: Task[]) => {
+        set(state => ({
+          tasksByStatus: {
+            ...state.tasksByStatus,
+            [status]: reorderedTasks,
+          },
+        }));
       },
 
       setFilters: (filters: TaskFilters) => {

@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useTaskStore } from '../stores/taskStore';
 import { TaskStatus, Task } from '../types';
@@ -17,7 +19,7 @@ import { TaskFilters } from '../components/TaskFilters';
 import { TaskCard } from '../components/TaskCard';
 
 export const Dashboard: React.FC = () => {
-  const { tasksByStatus, isLoading, fetchTasksByStatus, moveTask } = useTaskStore();
+  const { tasksByStatus, isLoading, fetchTasksByStatus, moveTask, reorderTasks } = useTaskStore();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +50,39 @@ export const Dashboard: React.FC = () => {
     setActiveTask(task || null);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    // If dragging over the same item, do nothing
+    if (activeId === overId) return;
+
+    // Find the containers
+    const activeContainer = findContainer(activeId as string);
+    const overContainer = findContainer(overId as string);
+
+    if (!activeContainer || !overContainer) return;
+
+    // If moving between different containers, handle it here
+    if (activeContainer !== overContainer) {
+      // This will be handled in handleDragEnd for API call
+      return;
+    }
+
+    // If moving within the same container, reorder locally
+    const activeIndex = tasksByStatus[activeContainer].findIndex(task => task.id === activeId);
+    const overIndex = tasksByStatus[overContainer].findIndex(task => task.id === overId);
+
+    if (activeIndex !== overIndex) {
+      const newTasks = arrayMove(tasksByStatus[activeContainer], activeIndex, overIndex);
+      reorderTasks(activeContainer, newTasks);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -57,23 +92,37 @@ export const Dashboard: React.FC = () => {
       return;
     }
 
-    const taskId = active.id as string;
-    const newStatus = over.id as TaskStatus;
+    const activeId = active.id as string;
+    const overId = over.id;
 
-    // Find current status of the task
-    let currentStatus: TaskStatus | null = null;
-    if (tasksByStatus.todo.some(task => task.id === taskId)) {
-      currentStatus = TaskStatus.TODO;
-    } else if (tasksByStatus.in_progress.some(task => task.id === taskId)) {
-      currentStatus = TaskStatus.IN_PROGRESS;
-    } else if (tasksByStatus.done.some(task => task.id === taskId)) {
-      currentStatus = TaskStatus.DONE;
+    // Find the containers
+    const activeContainer = findContainer(activeId);
+    
+    if (!activeContainer) return;
+
+    // If dropping on a column (status change)
+    if (typeof overId === 'string' && Object.values(TaskStatus).includes(overId as TaskStatus)) {
+      const newStatus = overId as TaskStatus;
+      if (activeContainer !== newStatus) {
+        await moveTask(activeId, newStatus);
+      }
+    }
+  };
+
+  const findContainer = (id: string): TaskStatus | null => {
+    // Check if it's a column ID
+    if (Object.values(TaskStatus).includes(id as TaskStatus)) {
+      return id as TaskStatus;
     }
 
-    // Only move if status changed
-    if (currentStatus && currentStatus !== newStatus) {
-      await moveTask(taskId, newStatus);
+    // Find which column contains this task
+    for (const [status, tasks] of Object.entries(tasksByStatus)) {
+      if (tasks.some((task: Task) => task.id === id)) {
+        return status as TaskStatus;
+      }
     }
+
+    return null;
   };
 
   const handleCreateTask = () => {
@@ -154,6 +203,7 @@ export const Dashboard: React.FC = () => {
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

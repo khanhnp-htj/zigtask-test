@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Task, TaskStatus } from '../types';
 import { TaskCard } from './TaskCard';
 import clsx from 'clsx';
@@ -27,6 +28,9 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({
     id: status,
   });
 
+  // Create array of task IDs for sortable context
+  const taskIds = tasks.map(task => task.id);
+
   return (
     <div className={clsx('rounded-lg border-2 border-dashed p-4', statusColors[status])}>
       <div className="flex items-center justify-between mb-4">
@@ -43,14 +47,16 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({
           isOver && 'bg-primary-50'
         )}
       >
-        {tasks.map((task, index) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            index={index}
-            onEdit={() => onEditTask(task.id)}
-          />
-        ))}
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+          {tasks.map((task, index) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              index={index}
+              onEdit={() => onEditTask(task.id)}
+            />
+          ))}
+        </SortableContext>
         
         {tasks.length === 0 && (
           <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
