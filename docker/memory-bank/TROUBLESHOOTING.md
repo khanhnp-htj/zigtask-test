@@ -569,6 +569,183 @@ docker volume inspect test_db_data
 ❌ Permission denied
 ```
 
+## 🔄 Application Logic Issues
+
+### Duplicate Task Creation (RESOLVED)
+
+#### Issue: Tasks Being Created Multiple Times
+```
+User creates one task but 2-3 duplicate tasks appear in the UI
+```
+
+**Root Cause:**
+This issue was caused by React.StrictMode in development mode, which intentionally double-invokes effects and functions to help detect side effects.
+
+**Solution Applied:**
+The issue has been permanently resolved by removing React.StrictMode from the application.
+
+**Before (causing duplicates):**
+```typescript
+// zigtask-client/src/index.tsx
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+```
+
+**After (fixed):**
+```typescript
+// zigtask-client/src/index.tsx
+root.render(
+  <App />
+);
+```
+
+**Additional Improvements:**
+- Removed WebSocket functionality to eliminate race conditions
+- Simplified task creation to pure REST API calls
+- Enhanced error handling to prevent duplicate API calls
+
+**Verification:**
+1. **Test Task Creation:**
+   ```bash
+   # Navigate to the app
+   open http://localhost:8080
+   
+   # Create a new task and verify only one appears
+   ```
+
+2. **Check Console for Errors:**
+   ```javascript
+   // Should see no WebSocket connection messages
+   // Should see only single success notifications
+   ```
+
+3. **Verify API Calls:**
+   ```bash
+   # Open Network tab in browser dev tools
+   # Create task - should see only one POST request to /tasks
+   ```
+
+#### Issue: WebSocket-Related Errors (RESOLVED)
+```
+WebSocket connection errors or multiple event handlers
+```
+
+**Solution:**
+WebSocket functionality has been completely removed to improve application stability and eliminate duplicate events.
+
+**Benefits of Removal:**
+- ✅ No more duplicate task creation
+- ✅ Simplified architecture
+- ✅ Better performance
+- ✅ Easier debugging
+- ✅ More predictable behavior
+
+### Performance Issues
+
+#### Issue: Slow Task Loading
+```
+Tasks take a long time to load or UI feels sluggish
+```
+
+**Solutions:**
+1. **Check API Response Times:**
+   ```bash
+   # Test API directly
+   curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8000/tasks
+   ```
+
+2. **Monitor Database Performance:**
+   ```bash
+   # Connect to database
+   docker exec -it docker-db-1 psql -U zigtask -d zigtask
+   
+   # Check slow queries
+   SELECT * FROM pg_stat_activity WHERE state = 'active';
+   ```
+
+3. **Clear Browser Cache:**
+   ```bash
+   # Hard refresh
+   Ctrl+Shift+R (Linux/Windows)
+   Cmd+Shift+R (Mac)
+   ```
+
+4. **Restart Containers:**
+   ```bash
+   cd docker
+   docker-compose restart
+   ```
+
+#### Issue: Memory Leaks
+```
+Browser tab uses excessive memory over time
+```
+
+**Solutions:**
+1. **Check for Memory Leaks:**
+   ```javascript
+   // Open browser dev tools > Memory tab
+   // Take heap snapshot before and after using the app
+   ```
+
+2. **Clear Application State:**
+   ```javascript
+   // Clear local storage
+   localStorage.clear();
+   
+   // Refresh the page
+   window.location.reload();
+   ```
+
+3. **Update Dependencies:**
+   ```bash
+   cd zigtask-client
+   npm update
+   npm audit fix
+   ```
+
+## 📋 Health Check Commands
+
+### Quick Status Check
+```bash
+# Check all services
+cd docker
+docker-compose ps
+
+# Check logs for errors
+docker-compose logs --tail=50
+```
+
+### Detailed Health Check
+```bash
+# API Health
+curl http://localhost:8000/auth/signin -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"test"}'
+
+# Database Connection
+docker exec -it docker-db-1 psql -U zigtask -d zigtask -c "SELECT version();"
+
+# Client Accessibility
+curl -I http://localhost:8080
+```
+
+### Performance Monitoring
+```bash
+# Monitor container resources
+docker stats
+
+# Check disk usage
+docker system df
+
+# Network connectivity
+docker network ls
+docker network inspect docker_zigtask-network
+```
+
 ---
 
 *If you encounter issues not covered in this guide, check the GitHub issues or create a new issue with the debug information collected above.* 

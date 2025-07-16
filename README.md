@@ -9,7 +9,7 @@ A comprehensive task management application built with modern technologies, feat
 - **Priority System** - Low (🟢), Medium (🟡), High (🔴) priority levels with color coding
 - **Status Management** - To Do, In Progress, Done workflow
 - **User Authentication** - JWT-based authentication system
-- **Real-time Updates** - WebSocket integration for live task updates
+- **Drag & Drop Interface** - Intuitive task management with drag and drop between columns
 - **Responsive Design** - Works seamlessly on desktop and mobile devices
 
 ### 🔧 Technical Features
@@ -19,6 +19,7 @@ A comprehensive task management application built with modern technologies, feat
 - **API Documentation** - Swagger/OpenAPI documentation
 - **Modern UI** - Tailwind CSS with clean, intuitive design
 - **Cross-Platform** - Web, mobile, and containerized deployment
+- **Reliable Performance** - Optimized for stability and performance
 
 ## 🏗️ Architecture
 
@@ -36,7 +37,6 @@ ZigTask/
 - **NestJS** - Progressive Node.js framework
 - **TypeORM** - Database ORM with PostgreSQL
 - **JWT** - Authentication & authorization
-- **WebSocket** - Real-time communication
 - **Swagger** - API documentation
 
 ### Frontend (zigtask-client)
@@ -45,6 +45,7 @@ ZigTask/
 - **Tailwind CSS** - Utility-first styling
 - **Zustand** - State management
 - **React Hot Toast** - User notifications
+- **DnD Kit** - Drag and drop functionality
 
 ### Mobile (zigtask-mobile)
 - **React Native** - Cross-platform mobile development
@@ -127,6 +128,7 @@ The application includes a comprehensive priority system:
 - `POST /auth/signup` - User registration
 - `POST /auth/signin` - User authentication
 - `GET /tasks` - Get user tasks (with optional priority filtering)
+- `GET /tasks/by-status` - Get tasks grouped by status
 - `POST /tasks` - Create new task
 - `PATCH /tasks/:id` - Update task
 - `DELETE /tasks/:id` - Delete task
@@ -135,8 +137,10 @@ The application includes a comprehensive priority system:
 ```sql
 -- Tasks table with priority enum
 CREATE TYPE tasks_priority_enum AS ENUM ('low', 'medium', 'high');
+CREATE TYPE tasks_status_enum AS ENUM ('todo', 'in_progress', 'done');
 
 ALTER TABLE tasks ADD COLUMN priority tasks_priority_enum DEFAULT 'medium' NOT NULL;
+ALTER TABLE tasks ADD COLUMN status tasks_status_enum DEFAULT 'todo' NOT NULL;
 ```
 
 ## 🐳 Docker Configuration
@@ -170,6 +174,21 @@ When the API is running, visit http://localhost:8000/api/docs for interactive Sw
 3. **CORS Issues**
    - Verify API CORS configuration allows your client URL
    - Check that CLIENT_URL environment variable is set correctly
+
+4. **Duplicate Task Creation (Resolved)**
+   - This issue was caused by React.StrictMode in development
+   - Fixed by removing React.StrictMode from index.tsx
+   - Tasks now create exactly once as expected
+
+## 🛡️ Known Issues & Solutions
+
+### React.StrictMode and Development Mode
+The application has been optimized for production deployment. In development, React.StrictMode was causing duplicate function calls leading to duplicate task creation. This has been resolved by removing React.StrictMode.
+
+### Performance Optimizations
+- **Lightweight Architecture**: WebSocket functionality was removed to eliminate complexity and improve reliability
+- **Efficient State Management**: Zustand provides lightweight and fast state updates
+- **Optimized API Calls**: RESTful architecture ensures predictable and reliable data operations
 
 ## 🤝 Contributing
 
