@@ -1,0 +1,76 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: zigtask
+      POSTGRES_PASSWORD: zigtaskpass
+      POSTGRES_DB: zigtask
+    ports:
+      - '5433:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - zigtask-network
+
+  api:
+    build:
+      context: ../zigtask-api
+      dockerfile: Dockerfile
+    env_file:
+      - ./api.env
+    environment:
+      - PORT=5000
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=zigtask
+      - DB_PASS=zigtaskpass
+      - DB_NAME=zigtask
+    ports:
+      - '8000:5000'
+    depends_on:
+      - db
+    networks:
+      - zigtask-network
+    volumes:
+      - ../zigtask-api:/app
+      - /app/node_modules
+
+  client:
+    build:
+      context: ../zigtask-client
+      dockerfile: Dockerfile
+    env_file:
+      - ./client.env
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+    networks:
+      - zigtask-network
+
+  mobile-dev:
+    build:
+      context: ../zigtask-mobile
+      dockerfile: Dockerfile.dev
+    ports:
+      - '19000:19000'  # Expo dev server
+      - '19001:19001'  # Expo dev tools
+      - '19002:19002'  # Expo tunnel
+    environment:
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    volumes:
+      - ../zigtask-mobile:/app
+      - /app/node_modules
+    networks:
+      - zigtask-network
+    depends_on:
+      - api
+
+volumes:
+  db_data:
+
+networks:
+  zigtask-network:
+    driver: bridge 
