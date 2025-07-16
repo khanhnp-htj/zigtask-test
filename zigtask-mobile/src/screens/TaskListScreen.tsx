@@ -15,7 +15,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { taskService } from '../services/taskService';
 import { storage } from '../utils/storage';
 import { networkUtil } from '../utils/network';
-import { websocketService } from '../services/websocketService';
 import TaskItem from '../components/TaskItem';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,50 +25,8 @@ const TaskListScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isOnline, setIsOnline] = useState(networkUtil.isOnline());
 
-  // WebSocket event handlers
-  const setupWebSocketListeners = () => {
-    websocketService.onTaskCreated((eventData) => {
-      if (eventData.task) {
-        setTasks(prevTasks => [...prevTasks, eventData.task]);
-        console.log('📱 Real-time task created:', eventData.task.title);
-      }
-    });
-
-    websocketService.onTaskUpdated((eventData) => {
-      if (eventData.task) {
-        setTasks(prevTasks => 
-          prevTasks.map(task => 
-            task.id === eventData.task!.id ? eventData.task! : task
-          )
-        );
-        console.log('📱 Real-time task updated:', eventData.task.title);
-      }
-    });
-
-    websocketService.onTaskDeleted((eventData) => {
-      setTasks(prevTasks => 
-        prevTasks.filter(task => task.id !== eventData.taskId)
-      );
-      console.log('📱 Real-time task deleted:', eventData.taskId);
-    });
-
-    websocketService.onTaskStatusChanged((eventData) => {
-      if (eventData.task) {
-        setTasks(prevTasks => 
-          prevTasks.map(task => 
-            task.id === eventData.task!.id ? eventData.task! : task
-          )
-        );
-        console.log('📱 Real-time task status changed:', eventData.task.title, eventData.newStatus);
-      }
-    });
-  };
-
   useEffect(() => {
     loadTasks();
-    
-    // Initialize WebSocket for real-time updates
-    setupWebSocketListeners();
     
     // Listen for network changes
     const unsubscribe = networkUtil.addListener((online) => {
@@ -77,14 +34,11 @@ const TaskListScreen: React.FC = () => {
       if (online) {
         syncOfflineActions();
         loadTasks();
-        // Reconnect WebSocket when back online
-        websocketService.connect();
       }
     });
 
     return () => {
       unsubscribe();
-      websocketService.disconnect();
     };
   }, []);
 
