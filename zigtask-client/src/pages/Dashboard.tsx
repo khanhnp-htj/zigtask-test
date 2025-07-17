@@ -97,16 +97,23 @@ export const Dashboard: React.FC = () => {
 
     // Find the containers
     const activeContainer = findContainer(activeId);
-    
+    const overContainer = findContainer(overId as string);
+
     if (!activeContainer) return;
 
-    // If dropping on a column (status change)
+    // FIXED: Handle cross-column movement properly
+    // If dropping on a column directly (status change)
     if (typeof overId === 'string' && Object.values(TaskStatus).includes(overId as TaskStatus)) {
       const newStatus = overId as TaskStatus;
       if (activeContainer !== newStatus) {
         await moveTask(activeId, newStatus);
       }
     }
+    // FIXED: If dropping on a task in a different column
+    else if (overContainer && activeContainer !== overContainer) {
+      await moveTask(activeId, overContainer);
+    }
+    // If dropping within the same column, the reorder was already handled in handleDragOver
   };
 
   const findContainer = (id: string): TaskStatus | null => {
@@ -171,7 +178,7 @@ export const Dashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 dark:border-primary-400"></div>
       </div>
     );
   }
@@ -181,14 +188,14 @@ export const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Task Dashboard</h1>
-          <p className="mt-1 text-gray-500">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Task Dashboard</h1>
+          <p className="mt-1 text-gray-500 dark:text-gray-400">
             Manage your tasks and track progress
           </p>
         </div>
         <button
           onClick={handleCreateTask}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 focus:ring-primary-500 transition-colors duration-200"
         >
           <PlusIcon className="h-5 w-5 mr-2" />
           Add Task
@@ -199,14 +206,14 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
         <div className="flex-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           </div>
           <input
             type="text"
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 dark:focus:placeholder-gray-500 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 transition-colors duration-200"
           />
         </div>
         <TaskFilters />
