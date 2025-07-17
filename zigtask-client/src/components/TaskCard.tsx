@@ -13,20 +13,20 @@ interface TaskCardProps {
 
 const priorityConfig = {
   [TaskPriority.LOW]: {
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
+    color: 'text-green-600 dark:text-green-400',
+    bgColor: 'bg-green-50 dark:bg-green-900/30',
     icon: '🟢',
     label: 'Low',
   },
   [TaskPriority.MEDIUM]: {
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-50',
+    color: 'text-yellow-600 dark:text-yellow-400',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-900/30',
     icon: '🟡',
     label: 'Medium',
   },
   [TaskPriority.HIGH]: {
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
+    color: 'text-red-600 dark:text-red-400',
+    bgColor: 'bg-red-50 dark:bg-red-900/30',
     icon: '🔴',
     label: 'High',
   },
@@ -58,10 +58,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-move"
+      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-move"
     >
       <div className="flex items-start justify-between mb-2">
-        <h4 className="text-sm font-medium text-gray-900 line-clamp-2">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
           {task.title}
         </h4>
         <button
@@ -69,7 +69,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
             e.stopPropagation();
             onEdit();
           }}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           title="Edit task"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -79,7 +79,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
       </div>
 
       {task.description && (
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
           {task.description}
         </p>
       )}
@@ -95,7 +95,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit }) => {
         </div>
 
         {task.dueDate && (
-          <div className="flex items-center text-xs text-gray-500">
+          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
             <CalendarIcon className="h-3 w-3 mr-1" />
             {format(new Date(task.dueDate), 'MMM dd')}
           </div>
