@@ -17,10 +17,12 @@ const useThemeStore = create<ThemeState>()(
         isDarkMode: false,
 
         toggleDarkMode: () => {
-          const newDarkMode = !get().isDarkMode;
+          const currentMode = get().isDarkMode;
+          const newDarkMode = !currentMode;
           set({ isDarkMode: newDarkMode });
           
           // Apply/remove dark class to document
+          // TODO: Maybe add a smooth transition here later
           if (newDarkMode) {
             document.documentElement.classList.add('dark');
           } else {
@@ -31,35 +33,38 @@ const useThemeStore = create<ThemeState>()(
         setDarkMode: (isDark: boolean) => {
           set({ isDarkMode: isDark });
           
-          // Apply/remove dark class to document
+          // Update the DOM class - could probably optimize this
+          const htmlElement = document.documentElement;
           if (isDark) {
-            document.documentElement.classList.add('dark');
+            htmlElement.classList.add('dark');
           } else {
-            document.documentElement.classList.remove('dark');
+            htmlElement.classList.remove('dark');
           }
         },
 
         initializeTheme: () => {
-          const { isDarkMode } = get();
+          const currentState = get();
           
-          // Check system preference if no stored preference
+          // Check if we're in a browser environment first
           if (typeof window !== 'undefined') {
-            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const shouldUseDark = isDarkMode !== undefined ? isDarkMode : systemPrefersDark;
+            // Get system preference as fallback
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const shouldUseDark = currentState.isDarkMode !== undefined ? currentState.isDarkMode : prefersDark;
             
-            // Apply the theme
+            // Apply the appropriate theme
+            const docElement = document.documentElement;
             if (shouldUseDark) {
-              document.documentElement.classList.add('dark');
+              docElement.classList.add('dark');
               set({ isDarkMode: true });
             } else {
-              document.documentElement.classList.remove('dark');
+              docElement.classList.remove('dark');
               set({ isDarkMode: false });
             }
           }
         },
       }),
       {
-        name: 'theme-store',
+        name: 'theme-preferences', // Changed from generic 'theme-store'
         partialize: (state) => ({ isDarkMode: state.isDarkMode }),
       }
     ),

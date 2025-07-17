@@ -11,7 +11,7 @@ import {
 import { taskService } from '../services/taskService';
 import toast from 'react-hot-toast';
 
-// Helper function to get current user ID
+// Helper to get current user - probably should move this to auth utils
 const getCurrentUserId = (): string | null => {
   try {
     const userStr = localStorage.getItem('user');
@@ -60,8 +60,8 @@ const useTaskStore = create<TaskState>()(
       fetchTasks: async () => {
         set({ isLoading: true });
         try {
-          const { filters } = get();
-          const tasks = await taskService.getTasks(filters);
+          const currentFilters = get().filters;
+          const tasks = await taskService.getTasks(currentFilters);
           set({ tasks, isLoading: false });
         } catch (error) {
           set({ isLoading: false });
@@ -87,12 +87,15 @@ const useTaskStore = create<TaskState>()(
       createTask: async (data: CreateTaskData) => {
         try {
           const newTask = await taskService.createTask(data);
-          const { tasksByStatus } = get();
-          const updatedTasksByStatus = {
-            ...tasksByStatus,
-            [newTask.status]: [...tasksByStatus[newTask.status], newTask],
+          
+          // Update the store optimistically
+          const currentTasks = get().tasksByStatus;
+          const updatedTasks = {
+            ...currentTasks,
+            [newTask.status]: [...currentTasks[newTask.status], newTask],
           };
-          set({ tasksByStatus: updatedTasksByStatus });
+          set({ tasksByStatus: updatedTasks });
+          
           toast.success('Task created successfully!');
         } catch (error) {
           console.error('Error creating task:', error);
@@ -104,19 +107,19 @@ const useTaskStore = create<TaskState>()(
       updateTask: async (id: string, data: UpdateTaskData) => {
         try {
           const updatedTask = await taskService.updateTask(id, data);
-          const { tasksByStatus } = get();
+          const currentTasks = get().tasksByStatus;
           
-          // Remove task from all status arrays first
-          const newTasksByStatus: TasksGroupedByStatus = {
-            [TaskStatus.TODO]: tasksByStatus[TaskStatus.TODO].filter(task => task.id !== id),
-            [TaskStatus.IN_PROGRESS]: tasksByStatus[TaskStatus.IN_PROGRESS].filter(task => task.id !== id),
-            [TaskStatus.DONE]: tasksByStatus[TaskStatus.DONE].filter(task => task.id !== id),
+          // Remove task from all status arrays first (just in case status changed)
+          const cleanedTasks: TasksGroupedByStatus = {
+            [TaskStatus.TODO]: currentTasks[TaskStatus.TODO].filter(task => task.id !== id),
+            [TaskStatus.IN_PROGRESS]: currentTasks[TaskStatus.IN_PROGRESS].filter(task => task.id !== id),
+            [TaskStatus.DONE]: currentTasks[TaskStatus.DONE].filter(task => task.id !== id),
           };
           
-          // Add updated task to correct status array
-          newTasksByStatus[updatedTask.status].push(updatedTask);
+          // Add updated task to the correct status array
+          cleanedTasks[updatedTask.status].push(updatedTask);
           
-          set({ tasksByStatus: newTasksByStatus });
+          set({ tasksByStatus: cleanedTasks });
           toast.success('Task updated successfully!');
         } catch (error) {
           console.error('Error updating task:', error);
@@ -128,15 +131,16 @@ const useTaskStore = create<TaskState>()(
       deleteTask: async (id: string) => {
         try {
           await taskService.deleteTask(id);
-          const { tasksByStatus } = get();
+          const currentTasks = get().tasksByStatus;
           
-          const newTasksByStatus: TasksGroupedByStatus = {
-            [TaskStatus.TODO]: tasksByStatus[TaskStatus.TODO].filter(task => task.id !== id),
-            [TaskStatus.IN_PROGRESS]: tasksByStatus[TaskStatus.IN_PROGRESS].filter(task => task.id !== id),
-            [TaskStatus.DONE]: tasksByStatus[TaskStatus.DONE].filter(task => task.id !== id),
+          // Remove task from all possible status arrays
+          const updatedTasks: TasksGroupedByStatus = {
+            [TaskStatus.TODO]: currentTasks[TaskStatus.TODO].filter(task => task.id !== id),
+            [TaskStatus.IN_PROGRESS]: currentTasks[TaskStatus.IN_PROGRESS].filter(task => task.id !== id),
+            [TaskStatus.DONE]: currentTasks[TaskStatus.DONE].filter(task => task.id !== id),
           };
           
-          set({ tasksByStatus: newTasksByStatus });
+          set({ tasksByStatus: updatedTasks });
           toast.success('Task deleted successfully!');
         } catch (error) {
           console.error('Error deleting task:', error);
@@ -148,20 +152,27 @@ const useTaskStore = create<TaskState>()(
       moveTask: async (taskId: string, newStatus: TaskStatus) => {
         try {
           const updatedTask = await taskService.updateTask(taskId, { status: newStatus });
-          const { tasksByStatus } = get();
+          const currentTasksByStatus = get().tasksByStatus;
           
-          // Remove task from all status arrays
-          const newTasksByStatus: TasksGroupedByStatus = {
-            [TaskStatus.TODO]: tasksByStatus[TaskStatus.TODO].filter(task => task.id !== taskId),
-            [TaskStatus.IN_PROGRESS]: tasksByStatus[TaskStatus.IN_PROGRESS].filter(task => task.id !== taskId),
-            [TaskStatus.DONE]: tasksByStatus[TaskStatus.DONE].filter(task => task.id !== taskId),
+          // Remove task from its current location
+          const updatedTasksByStatus: TasksGroupedByStatus = {
+            [TaskStatus.TODO]: currentTasksByStatus[TaskStatus.TODO].filter(task => task.id !== taskId),
+            [TaskStatus.IN_PROGRESS]: currentTasksByStatus[TaskStatus.IN_PROGRESS].filter(task => task.id !== taskId),
+            [TaskStatus.DONE]: currentTasksByStatus[TaskStatus.DONE].filter(task => task.id !== taskId),
           };
           
-          // Add task to new status array
-          newTasksByStatus[newStatus].push(updatedTask);
+          // Add task to new status column
+          updatedTasksByStatus[newStatus].push(updatedTask);
           
-          set({ tasksByStatus: newTasksByStatus });
-          toast.success(`Task moved to ${newStatus.replace('_', ' ')}`);
+          set({ tasksByStatus: updatedTasksByStatus });
+          
+          // Nice user feedback
+          const statusLabels = {
+            [TaskStatus.TODO]: 'To Do',
+            [TaskStatus.IN_PROGRESS]: 'In Progress', 
+            [TaskStatus.DONE]: 'Done'
+          };
+          toast.success(`Task moved to ${statusLabels[newStatus]}`);
         } catch (error) {
           console.error('Error moving task:', error);
           toast.error('Failed to move task');
@@ -170,12 +181,15 @@ const useTaskStore = create<TaskState>()(
       },
 
       reorderTasks: (status: TaskStatus, reorderedTasks: Task[]) => {
+        // Update the local state for immediate UI feedback
         set(state => ({
           tasksByStatus: {
             ...state.tasksByStatus,
             [status]: reorderedTasks,
           },
         }));
+        
+        // TODO: Could add server sync here later for persistent ordering
       },
 
       setFilters: (filters: TaskFilters) => {
@@ -187,7 +201,7 @@ const useTaskStore = create<TaskState>()(
       },
     })),
     {
-      name: 'task-store',
+      name: 'task-management-store',
       partialize: (state: TaskState) => ({
         filters: state.filters,
       }),

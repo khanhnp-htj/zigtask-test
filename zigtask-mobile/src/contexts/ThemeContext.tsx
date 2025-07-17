@@ -22,6 +22,7 @@ interface Theme {
   isDark: boolean;
 }
 
+// Light theme - clean and bright
 const lightTheme: Theme = {
   isDark: false,
   colors: {
@@ -40,10 +41,11 @@ const lightTheme: Theme = {
   },
 };
 
+// Dark theme - easier on the eyes
 const darkTheme: Theme = {
   isDark: true,
   colors: {
-    primary: '#0A84FF',
+    primary: '#0A84FF', // iOS-style blue
     primaryDark: '#0056CC',
     background: '#1a1a1a',
     surface: '#2c2c2e',
@@ -69,7 +71,7 @@ interface ThemeProviderProps {
   children: ReactNode;
 }
 
-const THEME_KEY = 'zigtask_theme';
+const THEME_STORAGE_KEY = 'user-theme-preference';
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
@@ -77,24 +79,25 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    initializeTheme();
+    loadThemePreference();
   }, []);
 
-  const initializeTheme = async () => {
+  const loadThemePreference = async () => {
     try {
-      // Try to get stored preference
-      const storedTheme = await SecureStore.getItemAsync(THEME_KEY);
+      // Check if user has a saved preference
+      const savedTheme = await SecureStore.getItemAsync(THEME_STORAGE_KEY);
       
-      if (storedTheme !== null) {
-        setIsDark(storedTheme === 'dark');
+      if (savedTheme !== null) {
+        // User has a preference, use it
+        setIsDark(savedTheme === 'dark');
       } else {
-        // Use system preference if no stored preference
+        // No preference saved, check system setting
         const systemColorScheme = Appearance.getColorScheme();
         setIsDark(systemColorScheme === 'dark');
       }
     } catch (error) {
-      console.error('Error initializing theme:', error);
-      // Fallback to system preference
+      console.error('Error loading theme preference:', error);
+      // Fallback to system preference if storage fails
       const systemColorScheme = Appearance.getColorScheme();
       setIsDark(systemColorScheme === 'dark');
     }
@@ -103,27 +106,31 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const setTheme = async (isDarkMode: boolean) => {
     try {
       setIsDark(isDarkMode);
-      await SecureStore.setItemAsync(THEME_KEY, isDarkMode ? 'dark' : 'light');
+      // Save the user's choice
+      await SecureStore.setItemAsync(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light');
     } catch (error) {
       console.error('Error saving theme preference:', error);
+      // Still update the UI even if saving fails
     }
   };
 
   const toggleTheme = () => {
-    setTheme(!isDark);
+    const newThemeIsDark = !isDark;
+    setTheme(newThemeIsDark);
   };
 
-  const theme = isDark ? darkTheme : lightTheme;
+  // Select the appropriate theme
+  const currentTheme = isDark ? darkTheme : lightTheme;
 
-  const value: ThemeContextType = {
-    theme,
+  const contextValue: ThemeContextType = {
+    theme: currentTheme,
     isDark,
     toggleTheme,
     setTheme,
   };
 
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

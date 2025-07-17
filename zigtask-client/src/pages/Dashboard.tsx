@@ -25,29 +25,31 @@ export const Dashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
+  // Configure drag sensors - might need to adjust sensitivity later
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3,
+        distance: 3, // Prevents accidental drags when clicking
       },
     })
   );
 
   useEffect(() => {
+    // Load tasks when component mounts
     fetchTasksByStatus();
   }, [fetchTasksByStatus]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     
-    // Find the task being dragged
-    const allTasks = [
+    // Find the task that's being dragged
+    const allTasksFlat = [
       ...tasksByStatus.todo,
       ...tasksByStatus.in_progress,
       ...tasksByStatus.done,
     ];
-    const task = allTasks.find(t => t.id === active.id);
-    setActiveTask(task || null);
+    const draggedTask = allTasksFlat.find(task => task.id === active.id);
+    setActiveTask(draggedTask || null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -58,34 +60,34 @@ export const Dashboard: React.FC = () => {
     const activeId = active.id;
     const overId = over.id;
 
-    // If dragging over the same item, do nothing
+    // Don't do anything if dragging over itself
     if (activeId === overId) return;
 
-    // Find the containers
+    // Figure out which columns we're dealing with
     const activeContainer = findContainer(activeId as string);
     const overContainer = findContainer(overId as string);
 
     if (!activeContainer || !overContainer) return;
 
-    // If moving between different containers, handle it here
+    // If moving between different containers, we'll handle it in handleDragEnd
     if (activeContainer !== overContainer) {
-      // This will be handled in handleDragEnd for API call
       return;
     }
 
-    // If moving within the same container, reorder locally
+    // Handle reordering within the same column
     const activeIndex = tasksByStatus[activeContainer].findIndex(task => task.id === activeId);
     const overIndex = tasksByStatus[overContainer].findIndex(task => task.id === overId);
 
     if (activeIndex !== overIndex) {
-      const newTasks = arrayMove(tasksByStatus[activeContainer], activeIndex, overIndex);
-      reorderTasks(activeContainer, newTasks);
+      const reorderedTasks = arrayMove(tasksByStatus[activeContainer], activeIndex, overIndex);
+      reorderTasks(activeContainer, reorderedTasks);
     }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
+    // Reset the active task for drag overlay
     setActiveTask(null);
 
     if (!over) {
@@ -95,37 +97,39 @@ export const Dashboard: React.FC = () => {
     const activeId = active.id as string;
     const overId = over.id;
 
-    // Find the containers
+    // Find which containers are involved
     const activeContainer = findContainer(activeId);
     const overContainer = findContainer(overId as string);
 
     if (!activeContainer) return;
 
     // FIXED: Handle cross-column movement properly
-    // If dropping on a column directly (status change)
+    // Scenario 1: Dropping directly on a column header
     if (typeof overId === 'string' && Object.values(TaskStatus).includes(overId as TaskStatus)) {
       const newStatus = overId as TaskStatus;
       if (activeContainer !== newStatus) {
         await moveTask(activeId, newStatus);
       }
     }
-    // FIXED: If dropping on a task in a different column
+    // Scenario 2: Dropping on a task in a different column
     else if (overContainer && activeContainer !== overContainer) {
       await moveTask(activeId, overContainer);
     }
-    // If dropping within the same column, the reorder was already handled in handleDragOver
+    // Scenario 3: Reordering within same column was already handled in handleDragOver
   };
 
-  const findContainer = (id: string): TaskStatus | null => {
-    // Check if it's a column ID
-    if (Object.values(TaskStatus).includes(id as TaskStatus)) {
-      return id as TaskStatus;
+  // Helper function to determine which column a task belongs to
+  const findContainer = (taskId: string): TaskStatus | null => {
+    // First check if it's actually a column ID
+    if (Object.values(TaskStatus).includes(taskId as TaskStatus)) {
+      return taskId as TaskStatus;
     }
 
-    // Find which column contains this task
-    for (const [status, tasks] of Object.entries(tasksByStatus)) {
-      if (tasks.some((task: Task) => task.id === id)) {
-        return status as TaskStatus;
+    // Otherwise, search through all tasks to find which column contains this task
+    for (const [statusKey, tasksInStatus] of Object.entries(tasksByStatus)) {
+      const taskExists = tasksInStatus.some((task: Task) => task.id === taskId);
+      if (taskExists) {
+        return statusKey as TaskStatus;
       }
     }
 
@@ -147,34 +151,36 @@ export const Dashboard: React.FC = () => {
     setSelectedTaskId(null);
   };
 
-  // Helper function to apply all filters to a task array
+  // Apply search and filter logic to tasks
   const applyFilters = (tasks: Task[]): Task[] => {
     return tasks.filter(task => {
-      // Search filter (local search query)
-      const matchesSearch = !searchQuery || 
+      // Text search filter
+      const searchMatch = !searchQuery || 
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Priority filter
-      const matchesPriority = !filters.priority || task.priority === filters.priority;
+      // Priority filter from store
+      const priorityMatch = !filters.priority || task.priority === filters.priority;
 
       // Date range filters
-      const matchesDateFrom = !filters.dateFrom || 
+      const dateFromMatch = !filters.dateFrom || 
         (task.dueDate && new Date(task.dueDate) >= new Date(filters.dateFrom));
       
-      const matchesDateTo = !filters.dateTo || 
+      const dateToMatch = !filters.dateTo || 
         (task.dueDate && new Date(task.dueDate) <= new Date(filters.dateTo));
 
-      return matchesSearch && matchesPriority && matchesDateFrom && matchesDateTo;
+      return searchMatch && priorityMatch && dateFromMatch && dateToMatch;
     });
   };
 
+  // Get filtered tasks for each status
   const filteredTasksByStatus = {
     todo: applyFilters(tasksByStatus.todo),
     in_progress: applyFilters(tasksByStatus.in_progress),
     done: applyFilters(tasksByStatus.done),
   };
 
+  // Show loading spinner while fetching data
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -185,7 +191,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Task Dashboard</h1>
@@ -202,7 +208,7 @@ export const Dashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search and Filters Section */}
       <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
         <div className="flex-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -219,7 +225,7 @@ export const Dashboard: React.FC = () => {
         <TaskFilters />
       </div>
 
-      {/* Task Board */}
+      {/* Main Kanban Board */}
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -247,6 +253,7 @@ export const Dashboard: React.FC = () => {
           />
         </div>
         
+        {/* Drag overlay with visual feedback */}
         <DragOverlay>
           {activeTask ? (
             <div className="rotate-5 opacity-95">
@@ -260,7 +267,7 @@ export const Dashboard: React.FC = () => {
         </DragOverlay>
       </DndContext>
 
-      {/* Task Modal */}
+      {/* Task Creation/Edit Modal */}
       <TaskModal
         isOpen={isTaskModalOpen}
         onClose={handleCloseModal}

@@ -26,7 +26,7 @@ const priorityLabels = {
 
 const priorityColors = {
   [TaskPriority.LOW]: 'text-green-600',
-  [TaskPriority.MEDIUM]: 'text-yellow-600',
+  [TaskPriority.MEDIUM]: 'text-yellow-600', 
   [TaskPriority.HIGH]: 'text-red-600',
 };
 
@@ -43,9 +43,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
-  const dueDateObj = watch('dueDateObj');
+  const dueDateValue = watch('dueDateObj');
 
-  // Find the task if editing
+  // Find the task if we're in edit mode
   const existingTask = isEditing
     ? [...tasksByStatus.todo, ...tasksByStatus.in_progress, ...tasksByStatus.done]
         .find(task => task.id === taskId)
@@ -54,7 +54,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
   useEffect(() => {
     if (isOpen) {
       if (existingTask) {
-        // Populate form with existing task data
+        // We're editing - populate form with existing data
         reset({
           title: existingTask.title,
           description: existingTask.description || '',
@@ -63,12 +63,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
           dueDateObj: existingTask.dueDate ? new Date(existingTask.dueDate) : undefined,
         });
       } else {
-        // Clear form for new task
+        // We're creating - set up defaults
         reset({
           title: '',
           description: '',
           status: TaskStatus.TODO,
-          priority: TaskPriority.MEDIUM,
+          priority: TaskPriority.MEDIUM, // Default to medium priority
           dueDateObj: undefined,
         });
       }
@@ -93,28 +93,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
 
       onClose();
     } catch (error) {
-      // Error is handled by the store and displayed via toast
+      // Error handling is managed by the store with toast notifications
+      console.error('Task submission error:', error);
     }
   };
 
-  const handleClose = () => {
-    reset();
+  const handleModalClose = () => {
+    reset(); // Clear form when closing
     onClose();
   };
 
   return (
-    <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
+    <Dialog open={isOpen} onClose={handleModalClose} className="relative z-50">
+      {/* Backdrop overlay */}
       <div className="fixed inset-0 bg-black/30 dark:bg-black/60" aria-hidden="true" />
       
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel className="mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl transition-colors duration-200">
-          {/* Header */}
+          {/* Modal Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
               {isEditing ? 'Edit Task' : 'Create New Task'}
             </Dialog.Title>
             <button
-              onClick={handleClose}
+              onClick={handleModalClose}
               className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               title="Close modal"
             >
@@ -122,9 +124,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
             </button>
           </div>
 
-          {/* Form */}
+          {/* Form Content */}
           <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-            {/* Title */}
+            {/* Task Title */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Title *
@@ -145,7 +147,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
               )}
             </div>
 
-            {/* Description */}
+            {/* Task Description */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
@@ -160,7 +162,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
 
             {/* Status and Priority Row */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Status */}
+              {/* Task Status */}
               <div>
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Status
@@ -175,7 +177,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
                 </select>
               </div>
 
-              {/* Priority */}
+              {/* Task Priority */}
               <div>
                 <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Priority
@@ -191,13 +193,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
               </div>
             </div>
 
-            {/* Due Date */}
+            {/* Due Date Picker */}
             <div>
               <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Due Date
               </label>
               <DatePicker
-                selected={dueDateObj}
+                selected={dueDateValue}
                 onChange={(date) => setValue('dueDateObj', date || undefined)}
                 dateFormat="MMM d, yyyy"
                 placeholderText="Select due date (optional)"
@@ -207,11 +209,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskId })
               />
             </div>
 
-            {/* Actions */}
+            {/* Action Buttons */}
             <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={handleModalClose}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors duration-200"
               >
                 Cancel

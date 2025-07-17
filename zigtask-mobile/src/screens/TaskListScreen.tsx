@@ -22,18 +22,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const TaskListScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<TaskStackParamList, 'TaskList'>>();
   const { theme, toggleTheme, isDark } = useTheme();
+  
+  // State management
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isOnline, setIsOnline] = useState(networkUtil.isOnline());
 
   useEffect(() => {
+    // Load tasks on component mount
     loadTasks();
     
-    // Listen for network changes
+    // Listen for network status changes
     const unsubscribe = networkUtil.addListener((online) => {
       setIsOnline(online);
       if (online) {
+        // When back online, sync any offline changes and refresh
         syncOfflineActions();
         loadTasks();
       }
@@ -49,13 +53,13 @@ const TaskListScreen: React.FC = () => {
       setIsLoading(true);
 
       if (networkUtil.isOnline()) {
-        // Online: Fetch from API
+        // We're online - fetch fresh data from server
         const fetchedTasks = await taskService.getTasks();
         setTasks(fetchedTasks);
-        // Cache the tasks
+        // Cache the data for offline use
         await storage.cacheData('tasks', fetchedTasks);
       } else {
-        // Offline: Load from cache
+        // Offline mode - try to load from cache
         const cachedTasks = await storage.getCachedData<Task[]>('tasks');
         if (cachedTasks) {
           setTasks(cachedTasks);
@@ -63,7 +67,7 @@ const TaskListScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
-      // Try to load from cache on error
+      // If API fails, try cache as fallback
       const cachedTasks = await storage.getCachedData<Task[]>('tasks');
       if (cachedTasks) {
         setTasks(cachedTasks);
@@ -84,6 +88,7 @@ const TaskListScreen: React.FC = () => {
     try {
       const offlineActions = await storage.getOfflineActions();
       
+      // Process each offline action
       for (const action of offlineActions) {
         try {
           switch (action.type) {
@@ -97,9 +102,11 @@ const TaskListScreen: React.FC = () => {
               await taskService.deleteTask(action.data.id);
               break;
           }
+          // Remove the action after successful sync
           await storage.removeOfflineAction(action.id);
         } catch (error) {
           console.error('Error syncing action:', action, error);
+          // Could add retry logic here later
         }
       }
     } catch (error) {
@@ -109,17 +116,18 @@ const TaskListScreen: React.FC = () => {
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
-      // Optimistically update UI
-      setTasks(prev => 
-        prev.map(task => 
+      // Optimistic update for better UX
+      setTasks(previousTasks => 
+        previousTasks.map(task => 
           task.id === taskId ? { ...task, status: newStatus } : task
         )
       );
 
       if (networkUtil.isOnline()) {
+        // Online - update immediately
         await taskService.updateTaskStatus(taskId, newStatus);
       } else {
-        // Store action for later sync
+        // Offline - queue for later sync
         await storage.addOfflineAction({
           type: 'UPDATE',
           data: { id: taskId, status: newStatus },
@@ -127,7 +135,7 @@ const TaskListScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error updating task status:', error);
-      // Revert optimistic update
+      // Revert the optimistic update on failure
       await loadTasks();
       Alert.alert('Error', 'Failed to update task status');
     }
@@ -144,13 +152,13 @@ const TaskListScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Optimistically update UI
+              // Optimistic removal
               setTasks(prev => prev.filter(task => task.id !== taskId));
 
               if (networkUtil.isOnline()) {
                 await taskService.deleteTask(taskId);
               } else {
-                // Store action for later sync
+                // Store deletion for offline sync
                 await storage.addOfflineAction({
                   type: 'DELETE',
                   data: { id: taskId },
@@ -158,7 +166,7 @@ const TaskListScreen: React.FC = () => {
               }
             } catch (error) {
               console.error('Error deleting task:', error);
-              // Revert optimistic update
+              // Restore task on error
               await loadTasks();
               Alert.alert('Error', 'Failed to delete task');
             }
@@ -205,6 +213,7 @@ const TaskListScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Offline indicator */}
       {!isOnline && (
         <View style={styles.offlineBar}>
           <Ionicons name="cloud-offline" size={16} color="white" />
@@ -212,9 +221,11 @@ const TaskListScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Header with title and actions */}
       <View style={styles.header}>
         <Text style={styles.title}>My Tasks</Text>
         <View style={styles.headerActions}>
+          {/* Theme toggle button */}
           <TouchableOpacity
             style={styles.themeButton}
             onPress={toggleTheme}
@@ -225,6 +236,7 @@ const TaskListScreen: React.FC = () => {
               color={theme.colors.text} 
             />
           </TouchableOpacity>
+          {/* Add new task button */}
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => navigation.navigate('TaskForm', {})}
@@ -234,6 +246,7 @@ const TaskListScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Main task list */}
       <SwipeListView
         data={tasks}
         renderItem={renderTask}

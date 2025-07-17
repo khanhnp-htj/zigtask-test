@@ -20,19 +20,19 @@ export const Header: React.FC = () => {
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+          {/* App Logo */}
           <div className="flex items-center">
             <h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400">
               ZigTask
             </h1>
           </div>
 
-          {/* Right side - Dark mode toggle and User menu */}
+          {/* Right side navigation */}
           <div className="flex items-center space-x-4">
-            {/* Dark Mode Toggle */}
+            {/* Dark mode toggle */}
             <DarkModeToggle />
             
-            {/* User menu */}
+            {/* User dropdown menu */}
             <Menu as="div" className="relative">
               <Menu.Button className="flex items-center space-x-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 rounded-md px-3 py-2 transition-colors duration-200">
                 <UserCircleIcon className="h-6 w-6" />
@@ -42,6 +42,7 @@ export const Header: React.FC = () => {
                 <ChevronDownIcon className="h-4 w-4" />
               </Menu.Button>
 
+              {/* Dropdown menu with smooth transition */}
               <Transition
                 as={Fragment}
                 enter="transition ease-out duration-100"
@@ -53,9 +54,12 @@ export const Header: React.FC = () => {
               >
                 <Menu.Items className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 dark:ring-gray-600 focus:outline-none z-50">
                   <div className="py-1">
+                    {/* User info section */}
                     <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-600">
                       {user?.email}
                     </div>
+                    
+                    {/* Logout option */}
                     <Menu.Item>
                       {({ active }) => (
                         <button
