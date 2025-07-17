@@ -34,11 +34,12 @@ class AuthService {
 
   async logout(): Promise<void> {
     try {
-      await apiService.post('/auth/logout');
+      // For JWT-based auth, logout is handled client-side by clearing tokens
+      // No need to call server endpoint since JWT tokens are stateless
+      apiService.clearAuthToken();
     } catch (error) {
       console.error('Auth service - logout error:', error);
-      // Don't throw error for logout as we want to clear local data anyway
-    } finally {
+      // Ensure tokens are cleared even if there's an error
       apiService.clearAuthToken();
     }
   }
