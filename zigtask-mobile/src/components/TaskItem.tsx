@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Task, TaskStatus, TaskPriority, TaskItemProps } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 import { format } from 'date-fns';
 
 const TaskItem: React.FC<TaskItemProps> = ({
@@ -15,6 +16,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onDelete,
   onEdit,
 }) => {
+  const { theme } = useTheme();
+
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case TaskStatus.TODO:
@@ -24,7 +27,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       case TaskStatus.DONE:
         return '#45B7D1';
       default:
-        return '#999';
+        return theme.colors.textSecondary;
     }
   };
 
@@ -37,7 +40,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       case TaskPriority.LOW:
         return '#26de81';
       default:
-        return '#999';
+        return theme.colors.textSecondary;
     }
   };
 
@@ -74,6 +77,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
     }
   };
 
+  const styles = createStyles(theme);
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.content} onPress={() => onEdit(task)}>
@@ -104,7 +109,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
           {task.dueDate && (
             <View style={styles.dueDateContainer}>
-              <Ionicons name="calendar-outline" size={14} color="#666" />
+              <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
               <Text style={styles.dueDate}>
                 {format(new Date(task.dueDate), 'MMM d')}
               </Text>
@@ -122,18 +127,18 @@ const TaskItem: React.FC<TaskItemProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.card,
     marginHorizontal: 16,
     marginVertical: 4,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: theme.isDark ? '#000' : '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: theme.isDark ? 0.3 : 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
@@ -149,7 +154,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.text,
     flex: 1,
     marginRight: 12,
   },
@@ -169,7 +174,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -195,17 +200,17 @@ const styles = StyleSheet.create({
   },
   dueDate: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginLeft: 4,
   },
   metadata: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: theme.colors.border,
     paddingTop: 8,
   },
   createdAt: {
     fontSize: 11,
-    color: '#999',
+    color: theme.colors.textSecondary,
   },
 });
 

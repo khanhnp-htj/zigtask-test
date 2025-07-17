@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { RegisterDto, AuthStackParamList } from '../types';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -29,6 +30,7 @@ interface FormData {
 const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<AuthStackParamList, 'Register'>>();
   const { register } = useAuth();
+  const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -71,6 +73,8 @@ const RegisterScreen: React.FC = () => {
     }
   };
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -85,7 +89,7 @@ const RegisterScreen: React.FC = () => {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Ionicons name="checkmark-circle" size={64} color="#007AFF" />
+                <Ionicons name="checkmark-circle" size={64} color={theme.colors.primary} />
               </View>
               <Text style={styles.title}>Create Account</Text>
               <Text style={styles.subtitle}>Join ZigTask today</Text>
@@ -113,6 +117,7 @@ const RegisterScreen: React.FC = () => {
                         <TextInput
                           style={[styles.input, errors.firstName && styles.inputError]}
                           placeholder="First name"
+                          placeholderTextColor={theme.colors.textSecondary}
                           value={value}
                           onChangeText={onChange}
                           onBlur={onBlur}
@@ -144,6 +149,7 @@ const RegisterScreen: React.FC = () => {
                         <TextInput
                           style={[styles.input, errors.lastName && styles.inputError]}
                           placeholder="Last name"
+                          placeholderTextColor={theme.colors.textSecondary}
                           value={value}
                           onChangeText={onChange}
                           onBlur={onBlur}
@@ -176,12 +182,13 @@ const RegisterScreen: React.FC = () => {
                       <Ionicons
                         name="mail-outline"
                         size={20}
-                        color="#666"
+                        color={theme.colors.textSecondary}
                         style={styles.inputIcon}
                       />
                       <TextInput
                         style={[styles.input, errors.email && styles.inputError]}
                         placeholder="Enter your email"
+                        placeholderTextColor={theme.colors.textSecondary}
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
@@ -215,12 +222,13 @@ const RegisterScreen: React.FC = () => {
                       <Ionicons
                         name="lock-closed-outline"
                         size={20}
-                        color="#666"
+                        color={theme.colors.textSecondary}
                         style={styles.inputIcon}
                       />
                       <TextInput
                         style={[styles.input, errors.password && styles.inputError]}
                         placeholder="Enter your password"
+                        placeholderTextColor={theme.colors.textSecondary}
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
@@ -233,7 +241,7 @@ const RegisterScreen: React.FC = () => {
                         <Ionicons
                           name={showPassword ? 'eye' : 'eye-off'}
                           size={20}
-                          color="#666"
+                          color={theme.colors.textSecondary}
                         />
                       </TouchableOpacity>
                     </View>
@@ -260,12 +268,13 @@ const RegisterScreen: React.FC = () => {
                       <Ionicons
                         name="lock-closed-outline"
                         size={20}
-                        color="#666"
+                        color={theme.colors.textSecondary}
                         style={styles.inputIcon}
                       />
                       <TextInput
                         style={[styles.input, errors.confirmPassword && styles.inputError]}
                         placeholder="Confirm your password"
+                        placeholderTextColor={theme.colors.textSecondary}
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
@@ -278,7 +287,7 @@ const RegisterScreen: React.FC = () => {
                         <Ionicons
                           name={showConfirmPassword ? 'eye' : 'eye-off'}
                           size={20}
-                          color="#666"
+                          color={theme.colors.textSecondary}
                         />
                       </TouchableOpacity>
                     </View>
@@ -320,10 +329,10 @@ const RegisterScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -347,12 +356,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   form: {
     width: '100%',
@@ -371,15 +380,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.text,
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 16,
   },
@@ -390,27 +399,27 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.text,
   },
   inputError: {
-    borderColor: '#f44336',
+    borderColor: theme.colors.error,
   },
   eyeIcon: {
     padding: 4,
   },
   errorText: {
-    color: '#f44336',
+    color: theme.colors.error,
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
   },
   registerButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#007AFF',
+    shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -420,7 +429,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   registerButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: theme.colors.textSecondary,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -436,11 +445,11 @@ const styles = StyleSheet.create({
   },
   signinText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   signinLink: {
     fontSize: 14,
-    color: '#007AFF',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
 });

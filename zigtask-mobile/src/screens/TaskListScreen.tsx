@@ -15,11 +15,13 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { taskService } from '../services/taskService';
 import { storage } from '../utils/storage';
 import { networkUtil } from '../utils/network';
+import { useTheme } from '../contexts/ThemeContext';
 import TaskItem from '../components/TaskItem';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const TaskListScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<TaskStackParamList, 'TaskList'>>();
+  const { theme, toggleTheme, isDark } = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -199,6 +201,8 @@ const TaskListScreen: React.FC = () => {
     </View>
   );
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.container}>
       {!isOnline && (
@@ -210,12 +214,24 @@ const TaskListScreen: React.FC = () => {
 
       <View style={styles.header}>
         <Text style={styles.title}>My Tasks</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('TaskForm', {})}
-        >
-          <Ionicons name="add" size={24} color="white" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.themeButton}
+            onPress={toggleTheme}
+          >
+            <Ionicons 
+              name={isDark ? 'sunny' : 'moon'} 
+              size={24} 
+              color={theme.colors.text} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('TaskForm', {})}
+          >
+            <Ionicons name="add" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <SwipeListView
@@ -229,14 +245,15 @@ const TaskListScreen: React.FC = () => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            colors={['#007AFF']}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
         style={styles.list}
         contentContainerStyle={tasks.length === 0 ? styles.emptyContainer : undefined}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="checkmark-circle-outline" size={64} color="#ccc" />
+            <Ionicons name="checkmark-circle-outline" size={64} color={theme.colors.textSecondary} />
             <Text style={styles.emptyText}>No tasks yet</Text>
             <Text style={styles.emptySubtext}>Tap the + button to create your first task</Text>
           </View>
@@ -246,13 +263,13 @@ const TaskListScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   offlineBar: {
-    backgroundColor: '#ff6b6b',
+    backgroundColor: theme.colors.error,
     paddingVertical: 8,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -270,17 +287,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.colors.border,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.text,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeButton: {
+    marginRight: 12,
+    padding: 8,
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -295,7 +320,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
     paddingHorizontal: 16,
   },
   hiddenButton: {
@@ -305,10 +330,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   editButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.success,
   },
   deleteButton: {
-    backgroundColor: '#f44336',
+    backgroundColor: theme.colors.error,
   },
   hiddenButtonText: {
     color: 'white',
@@ -326,13 +351,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginTop: 16,
     fontWeight: '500',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: theme.colors.textSecondary,
     marginTop: 8,
     textAlign: 'center',
   },
